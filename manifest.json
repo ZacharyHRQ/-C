@@ -5,7 +5,7 @@
   "description": "Copy the current tab's URL, or a Markdown link, with one keystroke. No popup.",
   "minimum_chrome_version": "116",
 
-  "permissions": ["activeTab", "clipboardWrite", "offscreen"],
+  "permissions": ["activeTab", "clipboardWrite", "offscreen", "scripting"],
 
   "background": {
     "service_worker": "background.js",

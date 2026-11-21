@@ -4,13 +4,16 @@
  * Three constraints shaped this file. They are the whole reason it is this
  * small, so they are worth stating up front:
  *
- * 1. No host permissions, and no DOM injection.
- *    We never touch the page. `activeTab` — granted automatically by the
- *    keyboard gesture that triggers this code — is all the page access needed.
- *    That removes `<all_urls>`, `tabs` and `scripting` from the manifest, and
- *    with them the "read and change all your data on all websites" install
- *    warning, the CSP failures, and the focus theft caused by injecting a
- *    <textarea> into someone else's document.
+ * 1. No host permissions.
+ *    `activeTab` — granted automatically by the keyboard gesture that triggers
+ *    this code — is all the page access we ask for. That keeps `<all_urls>` and
+ *    `tabs` out of the manifest, and with them the "read and change all your
+ *    data on all websites" install warning.
+ *
+ *    One deliberate DOM touch: the confirmation toast. It is appended to
+ *    `document.documentElement` in a closed shadow root, cannot be styled by
+ *    the page, and is removed when it fades. Nothing is injected before the
+ *    user asks for a copy, and nothing is left behind afterwards.
  *
  * 2. One clipboard path, not two.
  *    A hidden offscreen document owns the write. It is spawned on first use and
@@ -22,6 +25,8 @@
  *    The offscreen document reports the result of the actual clipboard write.
  *    A green check means it returned true; anything else is a red cross.
  */
+
+import { showToast } from "./toast.js";
 
 export {};
 
@@ -134,6 +139,29 @@ function render(tab: chrome.tabs.Tab, mode: Mode): string | null {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Toast                                                                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Best-effort confirmation pill at the bottom of the page.
+ *
+ * Restricted pages (chrome://, the Web Store, the PDF viewer) reject injection
+ * outright. That is expected, not an error: the badge on the toolbar is the
+ * feedback there, and it has already been set by the caller.
+ */
+async function showPageToast(tabId: number, text: string, ok: boolean): Promise<void> {
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: showToast,
+      args: [text, ok],
+    });
+  } catch {
+    /* badge-only page */
+  }
+}
+
+/* -------------------------------------------------------------------------- */
 /* Flow                                                                        */
 /* -------------------------------------------------------------------------- */
 
@@ -161,7 +189,11 @@ async function run(command: string, hinted?: chrome.tabs.Tab): Promise<void> {
       return;
     }
 
-    await flashBadge(tabId, await writeClipboard(payload));
+    const ok = await writeClipboard(payload);
+
+    // Badge first (works everywhere), then the toast (skipped where injection
+    // is blocked). Both fire regardless of the other's outcome.
+    await Promise.all([flashBadge(tabId, ok), showPageToast(tabId, payload, ok)]);
   } catch {
     await flashBadge(tabId, false).catch(() => {});
   }
