@@ -1,29 +1,15 @@
 /**
- * Quick Copy — background service worker.
+ * Quick Copy background service worker.
  *
- * Three constraints shaped this file. They are the whole reason it is this
- * small, so they are worth stating up front:
+ * The extension holds no host permissions. `activeTab`, granted by the keystroke
+ * that fires the command, is enough to read the active tab's URL and to inject
+ * the toast.
  *
- * 1. No host permissions.
- *    `activeTab` — granted automatically by the keyboard gesture that triggers
- *    this code — is all the page access we ask for. That keeps `<all_urls>` and
- *    `tabs` out of the manifest, and with them the "read and change all your
- *    data on all websites" install warning.
+ * The clipboard write runs in an offscreen document because the async Clipboard
+ * API needs a focused document and an offscreen document can never be focused.
+ * That document is created once and reused for later copies.
  *
- *    One deliberate DOM touch: the confirmation toast. It is appended to
- *    `document.documentElement` in a closed shadow root, cannot be styled by
- *    the page, and is removed when it fades. Nothing is injected before the
- *    user asks for a copy, and nothing is left behind afterwards.
- *
- * 2. One clipboard path, not two.
- *    A hidden offscreen document owns the write. It is spawned on first use and
- *    then reused, so every copy after the first is a single message hop rather
- *    than a document spawn. If the offscreen document is gone, we spawn it
- *    again — there is no second code path to keep in sync.
- *
- * 3. Never claim a success we have not verified.
- *    The offscreen document reports the result of the actual clipboard write.
- *    A green check means it returned true; anything else is a red cross.
+ * `render` returns null on restricted pages, where `activeTab` exposes no URL.
  */
 
 import { showToast } from "./toast.js";
@@ -107,7 +93,7 @@ async function writeClipboard(text: string): Promise<boolean> {
 /* Badge feedback                                                              */
 /* -------------------------------------------------------------------------- */
 
-/** Badges are set per tab, so a stale check dies with the tab. */
+/** Badges are set per tab, so a stale check disappears with its tab. */
 function clearBadge(tabId: number): Promise<void> {
   return chrome.action.setBadgeText({ tabId, text: "" });
 }
@@ -119,7 +105,7 @@ async function flashBadge(tabId: number, ok: boolean): Promise<void> {
   ]);
 
   // A service worker can be torn down before this fires, leaving the badge up.
-  // `clearBadge` at the start of every copy is the backstop for that case.
+  // Clearing it at the start of every copy covers that case.
   setTimeout(() => void clearBadge(tabId), BADGE_TTL_MS);
 }
 
@@ -143,11 +129,8 @@ function render(tab: chrome.tabs.Tab, mode: Mode): string | null {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Best-effort confirmation pill at the bottom of the page.
- *
- * Restricted pages (chrome://, the Web Store, the PDF viewer) reject injection
- * outright. That is expected, not an error: the badge on the toolbar is the
- * feedback there, and it has already been set by the caller.
+ * Draws the confirmation pill. Injection is refused on restricted pages, where
+ * the badge is the only feedback available.
  */
 async function showPageToast(tabId: number, text: string, ok: boolean): Promise<void> {
   try {
@@ -191,8 +174,7 @@ async function run(command: string, hinted?: chrome.tabs.Tab): Promise<void> {
 
     const ok = await writeClipboard(payload);
 
-    // Badge first (works everywhere), then the toast (skipped where injection
-    // is blocked). Both fire regardless of the other's outcome.
+    // The badge works everywhere. The toast is skipped where injection fails.
     await Promise.all([flashBadge(tabId, ok), showPageToast(tabId, payload, ok)]);
   } catch {
     await flashBadge(tabId, false).catch(() => {});
@@ -203,8 +185,8 @@ chrome.commands.onCommand.addListener((command, tab) => {
   void run(command, tab);
 });
 
-// Clicking the toolbar icon does the same thing as the primary shortcut, so the
-// extension is discoverable without opening its options.
+// A toolbar click behaves like the primary shortcut, so the extension can be
+// used without knowing the key combination.
 chrome.action.onClicked.addListener((tab) => {
   void run("copy-url", tab);
 });

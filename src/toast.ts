@@ -1,21 +1,20 @@
 /**
- * The in-page confirmation toast.
+ * The confirmation toast.
  *
- * IMPORTANT: this function is serialised by `chrome.scripting.executeScript`
- * and re-created inside the page from its own source text. It therefore must
- * not reference anything from module scope — no imports, no constants, no
- * helpers. Everything it needs is defined inside its own body.
+ * `chrome.scripting.executeScript` serialises this function and rebuilds it in
+ * the page from its source text, so it cannot reference anything from module
+ * scope. Everything it needs is defined inside its own body.
  *
- * It runs in the extension's isolated world, which gets its own JS globals but
- * shares the page's DOM. That is why the toast lives in a closed shadow root:
- * page CSS cannot reach in, and our CSS cannot leak out.
+ * It runs in the extension's isolated world, which has its own globals but shares
+ * the page's DOM. A closed shadow root keeps page CSS out and stops these styles
+ * from leaking into the page.
  */
 
 export function showToast(text: string, ok: boolean): void {
   const KEY = "__quickCopyToast";
   const store = globalThis as unknown as Record<string, unknown>;
 
-  // A second copy before the first toast faded: replace it rather than stack.
+  // A second copy before the first toast faded replaces it instead of stacking.
   const prior = store[KEY] as { host: HTMLElement; timer: number } | undefined;
   if (prior) {
     clearTimeout(prior.timer);
@@ -109,7 +108,7 @@ export function showToast(text: string, ok: boolean): void {
 
   const detail = document.createElement("span");
   detail.className = "text";
-  // textContent, never innerHTML: a URL is untrusted input.
+  // A URL is untrusted input, so it goes in as text rather than markup.
   detail.textContent = text;
 
   toast.append(mark, label, detail);

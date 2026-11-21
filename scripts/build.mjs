@@ -1,8 +1,8 @@
 /**
  * Assembles dist/ into a folder Chrome can load unpacked.
  *
- * tsc already emits the JS straight into dist/ (rootDir: src), so this only
- * copies the non-TypeScript assets. No bundler, no dependency tree to audit.
+ * tsc already emits the JS into dist/ (rootDir: src), so this copies only the
+ * non-TypeScript assets.
  */
 
 import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
@@ -13,8 +13,7 @@ const dist = join(root, "dist");
 
 await mkdir(dist, { recursive: true });
 
-// Manifest: copied verbatim, then validated for the one mistake that silently
-// breaks a build — an icon path that does not exist in dist/.
+// Copy the manifest, then check that every icon it references exists in dist/.
 const manifestPath = join(root, "manifest.json");
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
 await writeFile(join(dist, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");

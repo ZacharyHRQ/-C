@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Copy the current tab's URL, or a Markdown link, with one keystroke.",
+  "description": "Copy the current tab's URL or a Markdown link with one keystroke.",
   "scripts": {
     "build": "tsc && node scripts/build.mjs",
     "watch": "tsc --watch --preserveWatchOutput",

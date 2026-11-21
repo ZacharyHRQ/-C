@@ -1,9 +1,9 @@
-// Throwaway harness: pulls `render` out of the built file and exercises it.
+// Tests `render` from the built file, so it runs against the shipped code.
 import { readFile } from "node:fs/promises";
 
 const src = await readFile(new URL("../dist/background.js", import.meta.url), "utf8");
 
-// Grab the render() function body from the compiled output so we test the real code.
+// Extract the compiled render() so the test runs against the real output.
 const start = src.indexOf("function render(");
 const end = src.indexOf("\nasync function activeTab");
 const render = new Function(`${src.slice(start, end)}; return render;`)();

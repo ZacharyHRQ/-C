@@ -1,12 +1,12 @@
 /**
- * Offscreen document — the only place in the extension that touches a clipboard.
+ * Offscreen document. This is the only place in the extension that writes to the
+ * clipboard.
  *
- * Why a hidden document at all: MV3 service workers have no DOM, and the async
- * `navigator.clipboard` API refuses to write from a document that is not focused.
- * Offscreen documents can never be focused, so that route is a dead end here.
- * `document.execCommand("copy")` has no focus requirement and works because the
- * extension holds `clipboardWrite` — which is also why it still functions after
- * the browser deprecated it for normal web pages.
+ * MV3 service workers have no DOM, and `navigator.clipboard.writeText()` refuses
+ * to write from a document that is not focused, which an offscreen document never
+ * is. `document.execCommand("copy")` has no focus requirement, and the
+ * `clipboardWrite` permission keeps it working even though the API is deprecated
+ * for normal web pages.
  */
 
 export {};
@@ -52,6 +52,6 @@ function copy(text: string): boolean {
 chrome.runtime.onMessage.addListener((message: CopyMessage, _sender, sendResponse) => {
   if (message?.target !== "offscreen" || message.type !== "copy") return;
 
-  // Respond synchronously so the worker knows the real outcome, not a guess.
+  // Respond synchronously so the caller gets the result of the write.
   sendResponse({ ok: copy(message.text ?? "") });
 });
