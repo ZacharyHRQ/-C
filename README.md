@@ -38,8 +38,6 @@ quick-copy/
 └── dist/                  # ← load this in Chrome
 ```
 
-Chrome extensions can only ship JS, HTML and CSS, so the source is TypeScript compiled by `tsc` with no bundler and no runtime dependencies.
-
 ## How it works
 
 ### Permissions
