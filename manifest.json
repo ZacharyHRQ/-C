@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "Quick Copy",
+  "version": "1.0.0",
+  "description": "Copy the current tab's URL, or a Markdown link, with one keystroke. No popup.",
+  "minimum_chrome_version": "116",
+
+  "permissions": ["activeTab", "clipboardWrite", "offscreen"],
+
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+
+  "action": {
+    "default_title": "Copy this page's URL",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+
+  "commands": {
+    "copy-url": {
+      "suggested_key": { "default": "Ctrl+Shift+C", "mac": "Command+Shift+C" },
+      "description": "Copy this page's URL"
+    },
+    "copy-as-markdown": {
+      "suggested_key": { "default": "Ctrl+Shift+M", "mac": "Command+Shift+M" },
+      "description": "Copy this page as a Markdown link"
+    }
+  },
+
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}
